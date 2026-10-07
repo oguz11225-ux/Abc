@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Mobil Tetris Oyunu</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            max-width: 360px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #a6e3a1;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(166, 227, 161, 0.3);
+        }
+
+        .main-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: #181825;
+            border: 3px solid #313244;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        canvas#tetris {
+            display: block;
+            background-color: #11111b;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100px;
+        }
+
+        .panel {
+            background: #181825;
+            border: 2px solid #313244;
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #bac2de;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .panel-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f9e2af;
+        }
+
+        canvas#next {
+            display: block;
+            margin: 0 auto;
+            background-color: #11111b;
+            border-radius: 6px;
+        }
+
+        /* Dokunmatik Kontrol Paneli */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn {
+            flex: 1;
+            height: 52px;
+            background-color: #313244;
+            color: #cdd6f4;
+            border: 2px solid #45475a;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #181825;
+            transition: all 0.05s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #181825;
+            background-color: #45475a;
+        }
+
+        .btn-action {
+            background-color: #89b4fa;
+            color: #11111b;
+            border-color: #b4befe;
+        }
+
+        .btn-action:active {
+            background-color: #b4befe;
+        }
+
+        .btn-drop {
+            background-color: #f38ba8;
+            color: #11111b;
+            border-color: #f5e0dc;
+        }
+
+        .btn-drop:active {
+            background-color: #f5e0dc;
+        }
+
+        /* Overlay Ekranları (Oyun Bitti / Başlat) */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(17, 17, 27, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            border-radius: 10px;
+            z-index: 10;
+        }
+
+        .overlay h2 {
+            font-size: 22px;
+            color: #f38ba8;
+        }
+
+        .overlay p {
+            font-size: 14px;
+            color: #cdd6f4;
+        }
+
+        .start-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background: #a6e3a1;
+            color: #11111b;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #74c7ec;
+        }
+
+        .start-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #74c7ec;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <header>
+            <h1>TETRİS</h1>
+        </header>
+
+        <div class="main-container">
+            <div class="canvas-container">
+                <canvas id="tetris" width="200" height="400"></canvas>
+                
+                <div id="gameOverlay" class="overlay">
+                    <h2 id="overlayTitle">TETRİS</h2>
+                    <p id="overlaySub">Başlamak için dokun</p>
+                    <button class="start-btn" id="startBtn">OYNA</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <div class="panel-title">GELECEK</div>
+                    <canvas id="next" width="80" height="80"></canvas>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">SKOR</div>
+                    <div id="score" class="panel-value">0</div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">SEVİYE</div>
+                    <div id="level" class="panel-value">1</div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">SATIR</div>
+                    <div id="lines" class="panel-value">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <button id="btnRotate" class="btn btn-action">↻ DÖNDÜR</button>
+                <button id="btnHardDrop" class="btn btn-drop">⚡ DÜŞÜR</button>
+            </div>
+            <div class="control-row">
+                <button id="btnLeft" class="btn">◀</button>
+                <button id="btnDown" class="btn">▼</button>
+                <button id="btnRight" class="btn">▶</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('next');
+        const nextContext = nextCanvas.getContext('2d');
+
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const linesElement = document.getElementById('lines');
+        const overlay = document.getElementById('gameOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySub = document.getElementById('overlaySub');
+        const startBtn = document.getElementById('startBtn');
+
+        // Blok Renk Paleti (Catppuccin Pastel)
+        const colors = [
+            null,
+            '#89dceb', // I - Açık Mavi
+            '#f9e2af', // O - Sarı
+            '#cba6f7', // T - Mor
+            '#a6e3a1', // S - Yeşil
+            '#f38ba8', // Z - Kırmızı
+            '#89b4fa', // J - Mavi
+            '#fab387'  // L - Turuncu
+        ];
+
+        // Tetromino Şekilleri
+        const pieces = [
+            [],
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[2, 2], [2, 2]],                                         // O
+            [[0, 3, 0], [3, 3, 3], [0, 0, 0]],                         // T
+            [[0, 4, 4], [4, 4, 0], [0, 0, 0]],                         // S
+            [[5, 5, 0], [0, 5, 5], [0, 0, 0]],                         // Z
+            [[6, 0, 0], [6, 6, 6], [0, 0, 0]],                         // J
+            [[0, 0, 7], [7, 7, 7], [0, 0, 0]]                          // L
+        ];
+
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 20;
+
+        context.scale(BLOCK_SIZE, BLOCK_SIZE);
+        nextContext.scale(20, 20);
+
+        let board = createMatrix(COLS, ROWS);
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isGameOver = false;
+        let isPaused = false;
+        let gameRunning = false;
+
+        let player = {
+            pos: { x: 0, y: 0 },
+            matrix: null,
+            next: null
+        };
+
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) {
+                matrix.push(new Array(w).fill(0));
+            }
+            return matrix;
+        }
+
+        function createPiece(type) {
+            return pieces[type];
+        }
+
+        function collide(board, player) {
+            const [m, o] = [player.matrix, player.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                       (board[y + o.y] && board[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function merge(board, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        board[y + player.pos.y][x + player.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        function rotate(matrix, dir) {
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [
+                        matrix[x][y],
+                        matrix[y][x],
+                    ] = [
+                        matrix[y][x],
+                        matrix[x][y],
+                    ];
+                }
+            }
+            if (dir > 0) {
+                matrix.forEach(row => row.reverse());
+            } else {
+                matrix.reverse();
+            }
+        }
+
+        function playerRotate(dir) {
+            const pos = player.pos.x;
+            let offset = 1;
+            rotate(player.matrix, dir);
+            while (collide(board, player)) {
+                player.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > player.matrix[0].length) {
+                    rotate(player.matrix, -dir);
+                    player.pos.x = pos;
+                    return;
+                }
+            }
+        }
+
+        function playerMove(dir) {
+            player.pos.x += dir;
+            if (collide(board, player)) {
+                player.pos.x -= dir;
+            }
+        }
+
+        function playerDrop() {
+            player.pos.y++;
+            if (collide(board, player)) {
+                player.pos.y--;
+                merge(board, player);
+                playerReset();
+                arenaSweep();
+                updateScore();
+            }
+            dropCounter = 0;
+        }
+
+        function playerHardDrop() {
+            while (!collide(board, player)) {
+                player.pos.y++;
+            }
+            player.pos.y--;
+            merge(board, player);
+            playerReset();
+            arenaSweep();
+            updateScore();
+            dropCounter = 0;
+        }
+
+        function playerReset() {
+            if (player.next === null) {
+                player.next = Math.floor(Math.random() * 7) + 1;
+            }
+            player.matrix = createPiece(player.next);
+            player.next = Math.floor(Math.random() * 7) + 1;
+            player.pos.y = 0;
+            player.pos.x = (board[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+
+            drawNext();
+
+            if (collide(board, player)) {
+                isGameOver = true;
+                gameRunning = false;
+                overlayTitle.innerText = "OYUN BİTTİ";
+                overlaySub.innerText = `Skor: ${score}`;
+                startBtn.innerText = "TEKRAR OYNA";
+                overlay.style.display = "flex";
+            }
+        }
+
+        function arenaSweep() {
+            let rowCount = 0;
+            outer: for (let y = board.length - 1; y >= 0; --y) {
+                for (let x = 0; x < board[y].length; ++x) {
+                    if (board[y][x] === 0) {
+                        continue outer;
+                    }
+                }
+                const row = board.splice(y, 1)[0].fill(0);
+                board.unshift(row);
+                ++y;
+                rowCount++;
+            }
+
+            if (rowCount > 0) {
+                // Skorlama: 1 satır 100, 2 satır 300, 3 satır 500, 4 satır 800 (Tetris)
+                const lineScores = [0, 100, 300, 500, 800];
+                score += lineScores[rowCount] * level;
+                lines += rowCount;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+            }
+        }
+
+        function updateScore() {
+            scoreElement.innerText = score;
+            levelElement.innerText = level;
+            linesElement.innerText = lines;
+        }
+
+        function drawMatrix(matrix, offset, ctx) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        ctx.fillStyle = colors[value];
+                        ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                        
+                        // İnce Blok Çerçevesi
+                        ctx.lineWidth = 0.05;
+                        ctx.strokeStyle = '#11111b';
+                        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        function drawNext() {
+            nextContext.fillStyle = '#11111b';
+            nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            const matrix = createPiece(player.next);
+            const offset = {
+                x: (4 - matrix[0].length) / 2,
+                y: (4 - matrix.length) / 2
+            };
+            drawMatrix(matrix, offset, nextContext);
+        }
+
+        function draw() {
+            context.fillStyle = '#11111b';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawMatrix(board, { x: 0, y: 0 }, context);
+            if (player.matrix) {
+                drawMatrix(player.matrix, player.pos, context);
+            }
+        }
+
+        function update(time = 0) {
+            if (!gameRunning) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval) {
+                playerDrop();
+            }
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            board = createMatrix(COLS, ROWS);
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropInterval = 1000;
+            isGameOver = false;
+            gameRunning = true;
+            updateScore();
+            playerReset();
+            overlay.style.display = "none";
+            lastTime = performance.now();
+            update();
+        }
+
+        // Buton Dinleyicileri (Dokunmatik ve Tıklama)
+        function bindButton(id, action) {
+            const btn = document.getElementById(id);
+            const execute = (e) => {
+                e.preventDefault();
+                if (!gameRunning) return;
+                action();
+            };
+            btn.addEventListener('touchstart', execute, { passive: false });
+            btn.addEventListener('click', execute);
+        }
+
+        bindButton('btnLeft', () => playerMove(-1));
+        bindButton('btnRight', () => playerMove(1));
+        bindButton('btnDown', () => playerDrop());
+        bindButton('btnRotate', () => playerRotate(1));
+        bindButton('btnHardDrop', () => playerHardDrop());
+
+        // Klavyeden Oynayanlar İçin Kontroller
+        document.addEventListener('keydown', event => {
+            if (!gameRunning) return;
+
+            if (event.keyCode === 37) { // Sol Ok
+                playerMove(-1);
+            } else if (event.keyCode === 39) { // Sağ Ok
+                playerMove(1);
+            } else if (event.keyCode === 40) { // Aşağı Ok
+                playerDrop();
+            } else if (event.keyCode === 38 || event.keyCode === 87) { // Yukarı Ok / W
+                playerRotate(1);
+            } else if (event.keyCode === 32) { // Boşluk (Space)
+                playerHardDrop();
+            }
+        });
+
+        startBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startGame();
+        });
+
+        // Ekrana ilk çizim
+        draw();
+    </script>
+</body>
+</html>
